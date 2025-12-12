@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Словоучка</title>
+<script>
+// ссылка может быть на любое изображение, хоть в свой яндекс диск
+const TEST_TR_IMAGEURL = {
+    'apple': ['яблоко', 'https://loremflickr.com/640/480/apple,fruit,fresh?lock=4'],
+    'car': ['', 'https://loremflickr.com/640/480/car?lock=3'],
+    'cat': ['кот', '']
+  };
+</script>
+<style>
+  :root {
+      --bg-main: #f0f0f0;
+      --bg-panel: #ffffff;
+      --bg-list: #fafafa;
+      --accent: #3f51b5;
+      --accent-light: #5c6bc0;
+      --accent-dark: #303f9f;
+      --text-main: #222;
+      --text-muted: #666;
+      --error: #c62828;
+      --success: #2e7d32;
+      --border-radius: 8px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.15);
+      --font-size-main: 14px;
+      --font-size-large: 16px;
+      --font-size-xlarge: 18px;
+      --font-size-small: 12px;
+      --spacing-small: 6px;
+      --spacing-medium: 12px;
+      --spacing-large: 16px;
+      --image-block-height: 200px; /* Фиксированная высота блока */
+      --image-block-width: 100%;
+    }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg-main);
+    color: var(--text-main);
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 700px;
+    height: auto;
+    min-height: 100vh;
+    max-height: 100vh;
+    background: var(--bg-panel);
+    box-shadow: var(--shadow);
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #header {
+    padding: var(--spacing-large);
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #header-title {
+    font-size: var(--font-size-large);
+    font-weight: 600;
+  }
+
+  #content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-medium);
+    overflow: hidden;
+    gap: var(--spacing-medium);
+  }
+
+  /* Список слов */
+  #word-list-view {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #word-scroll {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg-list);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-medium);
+    margin-bottom: var(--spacing-medium);
+    min-height: 0; /* Prevent flex items from overflowing */
+  }
+
+  .scroll-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border: none;
+    background: #fff;
+    margin-bottom: var(--spacing-small);
+    padding: var(--spacing-medium);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    text-align: left;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+    min-height: 80px;
+  }
+
+  .scroll-item:hover {
+    background: #f3f4ff;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+  }
+
+  .scroll-item:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .scroll-item-image {
+      flex: 0 0 80px;
+      width: 80px;
+      border-radius: 4px;
+      margin-right: var(--spacing-medium);
+      background: #c8e6c9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--font-size-small);
+      color: var(--text-muted);
+      overflow: hidden;
+      position: relative;
+      min-height: 80px; /* Ensure consistent height even without image */
+      height: 80px; /* Фиксированная высота блока */
+      box-sizing: border-box; /* Ensure padding doesn't affect dimensions */
+    }
+
+  .scroll-item-image .image-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .scroll-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .scroll-item-image .svg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .scroll-item-image .svg-overlay svg {
+    max-width: 90%;
+    max-height: 90%;
+  }
+
+  /* Экран списка слов */
+  .scroll-item-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .scroll-item-name {
+    font-size: var(--font-size-xlarge);
+    font-weight: 700;
+    margin-bottom: var(--spacing-small);
+    color: var(--text-main);
+  }
+
+  .scroll-item-stat {
+    font-size: var(--font-size-small);
+    color: var(--text-muted);
+  }
+
+  /* Экран теста */
+  #test-view {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    padding: var(--spacing-medium);
+  }
+  
+  #word-list-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #test-top {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: var(--spacing-medium);
+    gap: var(--spacing-medium);
+  }
+
+  #test-image {
+    flex: 0 0 45%;
+    min-height: var(--image-block-height);
+    max-height: 260px;
+    background: #e3f2fd;
+    border-radius: var(--image-block-radius);
+    margin-bottom: var(--spacing-medium);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    height: var(--image-block-height); /* Фиксированная высота блока */
+    min-height: var(--image-block-height); /* Ensure consistent height even without image */
+    width: 100%; /* Ширина блока */
+    box-sizing: border-box; /* Убедиться, что padding не влияет на размеры */
+  }
+
+  #test-image-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--image-block-height); /* Фиксированная высота блока */
+    height: var(--image-block-height); /* Фиксированная высота блока */
+    box-sizing: border-box; /* Убедиться, что padding не влияет на размеры */
+  }
+
+  #test-image-inner .image-container {
+    width: 100%;
+    height: var(--image-block-height); /* Фиксированная высота блока */
+    min-height: var(--image-block-height); /* Ensure consistent height even without image */
+    position: relative;
+    box-sizing: border-box; /* Убедиться, что padding не влияет на размеры */
+  }
+
+  #test-image-inner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  #test-image-inner .svg-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--image-block-height); /* Фиксированная высота блока */
+    height: var(--image-block-height); /* Фиксированная высота блока */
+  }
+
+  #test-image-inner .svg-overlay svg {
+    max-width: 90%;
+    max-height: 90%;
+    display: block; /* Убедиться, что SVG занимает полную высоту */
+  }
+
+  #test-word-widgets {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: var(--spacing-medium);
+    gap: var(--spacing-small);
+    flex-wrap: wrap;
+    padding: var(--spacing-medium);
+  }
+
+  .word-widget {
+    width: 40px;
+    height: 48px;
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+    border-radius: 8px;
+    border: 2px solid #ddd;
+    background: #fff;
+    outline: none;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: text;
+  }
+
+  .word-widget.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(63,81,181,0.2);
+    background: #f3f4ff;
+  }
+
+  .word-widget.filled {
+    border-color: var(--success);
+    background: #e8f5e8;
+  }
+
+  .word-widget.disabled {
+    background: #f5f5f5;
+    color: #999;
+    border-color: #e0e0e0;
+    cursor: not-allowed;
+  }
+
+  #test-buttons {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-medium);
+    margin-top: auto;
+  }
+
+  .btn {
+    border-radius: var(--border-radius);
+    border: none;
+    padding: var(--spacing-medium) 16px;
+    font-size: var(--font-size-main);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-light);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: #e0e0e0;
+    color: #111;
+  }
+
+  .btn-secondary:hover {
+    background: #d5d5d5;
+    transform: translateY(-1px);
+  }
+
+  #test-status {
+    flex: 0 0 auto;
+    min-height: 24px;
+    font-size: var(--font-size-main);
+    margin-top: var(--spacing-medium);
+    text-align: center;
+    padding: var(--spacing-small) 0;
+  }
+
+  #test-status.success {
+    color: var(--success);
+  }
+
+  #test-status.error {
+    color: var(--error);
+  }
+
+  #test-bottom-bar {
+    flex: 0 0 auto;
+    font-size: var(--font-size-small);
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--spacing-medium);
+  }
+
+  @media (max-width: 768px) {
+    #app {
+      width: 100%;
+      height: auto;
+      min-height: 90vh;
+      border-radius: 0;
+      padding: 0 8px;
+    }
+  
+    #header {
+      padding: var(--spacing-medium);
+    }
+  
+    #content {
+      padding: var(--spacing-small);
+    }
+  
+    .word-widget {
+      width: 40px;
+      height: 50px;
+      font-size: 22px;
+      min-height: 50px;
+    }
+  
+    #test-image {
+      min-height: 150px;
+      max-height: 200px;
+    }
+  
+    #test-word-widgets {
+      gap: var(--spacing-small);
+      padding: var(--spacing-medium);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    #app {
+      width: 100%;
+      height: auto;
+      min-height: 95vh;
+      padding: 0 4px;
+    }
+  
+    .word-widget {
+      width: 36px;
+      height: 44px;
+      font-size: 20px;
+      min-height: 44px;
+    }
+  
+    #test-image {
+      min-height: 120px;
+      max-height: 180px;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div id="header-title">Словоучка</div>
+  </div>
+
+  <div id="content">
+    <!-- Список слов -->
+    <div id="word-list-view">
+      <div id="word-scroll">
+        <!-- Элементы списка будут созданы скриптом -->
+      </div>
+    </div>
+
+    <!-- Экран теста -->
+    <div id="test-view">
+      <div id="test-top">
+        <div id="test-image">
+          <div id="test-image-inner">
+            <span style="font-size:var(--font-size-small);color:var(--text-muted);">Нет изображения</span>
+          </div>
+        </div>
+
+        <div id="test-word-widgets">
+          <!-- wordWidget элементы будут созданы скриптом -->
+        </div>
+
+        <div id="test-status"></div>
+
+        <div id="test-buttons">
+          <button id="btn-other-word" class="btn btn-secondary">Выбрать другое слово</button>
+          <button id="btn-accept" class="btn btn-primary">Принять</button>
+        </div>
+      </div>
+
+      <div id="test-bottom-bar">
+        <div id="test-level-label"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const SPACE_CHAR = "_";
+  const RIGHT_ANSWER_TITLE = "Отлично!";
+  const RIGHT_ANSWER_TEXT = "Всё верно! Так держать!";
+  const ERROR_TITLE = "Ошибка!";
+  const WRONG_ANSWER_TEXT = "Неверно введено слово!\nПопробуй ещё раз :)";
+  const WINS_LABEL = "Побед: ";
+  const SETTINGS_KEY_SCROLL_ITEMS = "SETTINGS_KEY_SCROLL_ITEMS";
+
+function loadWordsAndImages() {
+  return Object.entries(TEST_TR_IMAGEURL).map(([key, [russianWord, imgUrl]]) => {
+    return { key: key, word: russianWord, img: imgUrl };
+  });
+}
+
+  function loadWins() {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY_SCROLL_ITEMS);
+      if (!raw) return {};
+      return JSON.parse(raw);
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveWins(map) {
+    try {
+      localStorage.setItem(SETTINGS_KEY_SCROLL_ITEMS, JSON.stringify(map));
+    } catch (e) {}
+  }
+
+  let wordsData = [];
+  let winsMap = {};
+  let scrollItems = {};
+
+  // Ждем загрузки DOM
+  function init() {
+    const elWordListView = document.getElementById("word-list-view");
+    const elWordScroll = document.getElementById("word-scroll");
+    const elTestView = document.getElementById("test-view");
+    const elTestImageInner = document.getElementById("test-image-inner");
+    const elTestWordWidgets = document.getElementById("test-word-widgets");
+    const elBtnAccept = document.getElementById("btn-accept");
+    const elBtnOtherWord = document.getElementById("btn-other-word");
+    const elTestStatus = document.getElementById("test-status");
+    const elTestLevelLabel = document.getElementById("test-level-label");
+
+    if (!elWordScroll) {
+      console.error("DOM не загружен");
+      return;
+    }
+
+    winsMap = loadWins();
+    wordsData = loadWordsAndImages();
+    
+    initWordList(elWordScroll);
+    
+    elBtnAccept.onclick = onAccept;
+    elBtnOtherWord.onclick = showWordListView.bind(null, elTestView, elWordListView);
+  }
+
+  function getWinsForWord(key) {
+    return winsMap[key] || 0;
+  }
+
+  function setWinsForWord(key, value) {
+    winsMap[key] = value;
+    saveWins(winsMap);
+  }
+
+  function isValidImageUrl(url) {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol.startsWith('http');
+    } catch {
+      return false;
+    }
+  }
+
+  function createImageWithOverlay(imgSrc, word, isForScroll = false) {
+    const container = document.createElement("div");
+    container.className = "image-container";
+    
+    if (imgSrc && isValidImageUrl(imgSrc)) {
+      // Проверяем, загружается ли изображение
+      const img = document.createElement("img");
+      img.src = imgSrc;
+      img.alt = word;
+      
+      img.onerror = function() {
+        // Если изображение не загрузилось, показываем пустой квадрат
+        img.style.display = 'none';
+        container.style.backgroundColor = '#f5f5f5';
+        container.style.border = '1px solid #ddd';
+      };
+      
+      container.appendChild(img);
+    } else {
+      // Нет URL или он невалидный - рисуем пустой квадрат
+      container.style.backgroundColor = '#f5f5f5';
+      container.style.border = '1px solid #ddd';
+    }
+    
+    // Создаем SVG overlay с текстом
+	if (word) {
+	const svgOverlay = document.createElement("div");
+	svgOverlay.className = "svg-overlay";
+	
+	const svgNS = "http://www.w3.org/2000/svg";
+	const svg = document.createElementNS(svgNS, "svg");
+	svg.setAttribute("width", "100%");
+	svg.setAttribute("height", "100%");
+	svg.setAttribute("viewBox", "0 0 100 100");
+	
+	// Вычисляем приблизительную ширину текста (примерно 3.5 единицы на символ для шрифта 12px)
+	const textWidth = Math.max(word.length * 6.5, 60); // Ограничиваем максимальную ширину
+	const rectWidth = textWidth + 6; // Добавляем небольшой отступ
+	const rectX = (100 - rectWidth) / 2; // Центрируем прямоугольник
+	
+	// Добавляем прямоугольник под текстом для контраста
+	const rect = document.createElementNS(svgNS, "rect");
+	rect.setAttribute("x", rectX.toString());
+	rect.setAttribute("y", "40");
+	rect.setAttribute("width", rectWidth.toString());
+	rect.setAttribute("height", "20");
+	rect.setAttribute("rx", "4");
+	rect.setAttribute("fill", "rgba(255, 255, 255, 0.8)");
+	rect.setAttribute("stroke", "rgba(0, 0, 0, 0.2)");
+	rect.setAttribute("stroke-width", "0.5");
+	
+	svg.appendChild(rect);
+	
+	const text = document.createElementNS(svgNS, "text");
+	text.setAttribute("x", "50");
+	text.setAttribute("y", "50");
+	text.setAttribute("text-anchor", "middle");
+	text.setAttribute("dominant-baseline", "middle");
+	text.setAttribute("font-size", "12");
+	text.setAttribute("fill", "#333");
+	text.setAttribute("font-family", "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif");
+	text.textContent = word;
+	
+	svg.appendChild(text);
+	svgOverlay.appendChild(svg);
+	container.appendChild(svgOverlay);
+	}
+    
+    return container;
+  }
+
+  function createScrollItem(key, word, imgSrc) {
+    const btn = document.createElement("button");
+    btn.className = "scroll-item";
+    btn.type = "button";
+
+    const imgWrap = document.createElement("div");
+    imgWrap.className = "scroll-item-image";
+    
+    const imageContainer = createImageWithOverlay(imgSrc, word, true);
+    imgWrap.appendChild(imageContainer);
+
+    const main = document.createElement("div");
+    main.className = "scroll-item-main";
+
+    const nameLabel = document.createElement("div");
+    nameLabel.className = "scroll-item-name";
+    nameLabel.textContent = key; // Показываем оригинальное слово (apple, car, cat)
+
+    const statLabel = document.createElement("div");
+    statLabel.className = "scroll-item-stat";
+    statLabel.textContent = WINS_LABEL + getWinsForWord(key);
+
+    main.appendChild(nameLabel);
+    main.appendChild(statLabel);
+    btn.appendChild(imgWrap);
+    btn.appendChild(main);
+
+    btn._wordKey = key;
+    btn._wordName = word; // Сохраняем локализованное слово
+    btn._statLabel = statLabel;
+    scrollItems[key] = btn;
+
+    btn.onclick = startTestForWord.bind(null, btn, wordsData);
+    return btn;
+  }
+
+  function initWordList(elWordScroll) {
+    elWordScroll.innerHTML = "";
+    scrollItems = {};
+    wordsData.forEach(item => {
+      elWordScroll.appendChild(createScrollItem(item.key, item.word, item.img));
+    });
+  }
+
+  let currentScrollItem = null;
+  let currentWordKey = "";
+  let currentWord = "";
+  let currentLevel = 0;
+  let maxLevel = 0;
+  let wordWidgets = [];
+
+  function buildMaskedIndices(word, level) {
+    const len = word.length;
+    const maskCount = Math.min(level, len);
+    const indices = Array.from({length: len}, (_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    return indices.slice(0, maskCount).sort((a, b) => a - b);
+  }
+
+  function focusFirstEmptyWidget() {
+    for (let i = 0; i < wordWidgets.length; i++) {
+      if (wordWidgets[i].textContent.trim() === "" && wordWidgets[i].contentEditable) {
+        wordWidgets[i].classList.add('active');
+        wordWidgets[i].focus();
+        return;
+      }
+    }
+  }
+
+  function createWordWidgets(elTestWordWidgets, word, maskedIndices) {
+    elTestWordWidgets.innerHTML = "";
+    wordWidgets = [];
+    for (let i = 0; i < word.length; i++) {
+      const widget = document.createElement("div");
+      widget.className = "word-widget";
+      widget.tabIndex = 0;
+      if (maskedIndices.includes(i)) {
+        widget.contentEditable = true;
+      } else {
+        widget.textContent = word[i];
+        widget.classList.add('filled', 'disabled');
+      }
+      widget.oninput = function(e) {
+        let val = e.target.textContent.trim();
+        if (val.length > 1) e.target.textContent = val[0];
+        if (val) {
+          e.target.classList.remove('active');
+          e.target.classList.add('filled');
+        }
+        focusFirstEmptyWidget();
+      };
+      widget.onkeydown = function(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onAccept();
+        }
+      };
+      widget.onfocus = function() {
+        wordWidgets.forEach(w => w.classList.remove('active'));
+        this.classList.add('active');
+      };
+      elTestWordWidgets.appendChild(widget);
+      wordWidgets.push(widget);
+    }
+    focusFirstEmptyWidget();
+  }
+
+function startTestForWord(scrollItem, wordsData) {
+  currentScrollItem = scrollItem;
+  currentWordKey = scrollItem._wordKey;
+  currentWord = currentWordKey; // Используем оригинальное слово для ввода
+  maxLevel = currentWord.length;
+  currentLevel = 1;
+
+  const elTestImageInner = document.getElementById("test-image-inner");
+  const elTestLevelLabel = document.getElementById("test-level-label");
+  const elTestWordWidgets = document.getElementById("test-word-widgets");
+  const elTestStatus = document.getElementById("test-status");
+
+  // ✅ Берем изображение из wordsData по currentWordKey
+  const wordData = wordsData.find(item => item.key === currentWordKey);
+  if (wordData) {
+    elTestImageInner.innerHTML = '';
+    const imageContainer = createImageWithOverlay(wordData.img, wordData.word); // Показываем локализованное слово поверх
+    elTestImageInner.appendChild(imageContainer);
+  } else {
+    // Нет данных - рисуем пустой квадрат
+    elTestImageInner.innerHTML = '<span style="font-size:var(--font-size-small);color:var(--text-muted);">Нет изображения</span>';
+  }
+  
+  elTestLevelLabel.textContent = `Уровень: ${currentLevel} / ${maxLevel}`;
+  
+  const maskedIndices = buildMaskedIndices(currentWord, currentLevel);
+  createWordWidgets(elTestWordWidgets, currentWord, maskedIndices);
+  elTestStatus.textContent = "";
+  
+  document.getElementById("test-view").style.display = "flex";
+  document.getElementById("word-list-view").style.display = "none";
+}
+
+
+  function showWordListView(elTestView, elWordListView) {
+    elTestView.style.display = "none";
+    elWordListView.style.display = "flex";
+  }
+
+  function getUserInput() {
+    return wordWidgets.map(w => w.textContent.trim()).join('');
+  }
+
+  function onAccept() {
+    const input = getUserInput();
+    const elTestStatus = document.getElementById("test-status");
+    
+    if (input.toLowerCase() !== currentWord.toLowerCase()) {
+      elTestStatus.textContent = ERROR_TITLE + " " + WRONG_ANSWER_TEXT;
+      elTestStatus.className = "error";
+      // Перезапуск с 1 уровня
+      currentLevel = 1;
+      const maskedIndices = buildMaskedIndices(currentWord, currentLevel);
+      createWordWidgets(document.getElementById("test-word-widgets"), currentWord, maskedIndices);
+      return;
+    }
+
+    if (currentLevel >= maxLevel) {
+      elTestStatus.textContent = RIGHT_ANSWER_TITLE + " " + RIGHT_ANSWER_TEXT;
+      elTestStatus.className = "success";
+      
+      if (currentScrollItem) {
+        const currWins = getWinsForWord(currentWordKey);
+        setWinsForWord(currentWordKey, currWins + 1);
+        currentScrollItem._statLabel.textContent = WINS_LABEL + (currWins + 1);
+      }
+      
+      setTimeout(() => showWordListView(document.getElementById("test-view"), document.getElementById("word-list-view")), 1000);
+    } else {
+      currentLevel++;
+      const elTestLevelLabel = document.getElementById("test-level-label");
+      elTestLevelLabel.textContent = `Уровень: ${currentLevel} / ${maxLevel}`;
+      const maskedIndices = buildMaskedIndices(currentWord, currentLevel);
+      createWordWidgets(document.getElementById("test-word-widgets"), currentWord, maskedIndices);
+      elTestStatus.textContent = "Верно! Следующий уровень.";
+      elTestStatus.className = "success";
+    }
+  }
+
+  // СТАРТ ПРИЛОЖЕНИЯ
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
